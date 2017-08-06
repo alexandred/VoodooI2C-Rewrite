@@ -15,7 +15,7 @@ OSDefineMetaClassAndStructors(VoodooI2CController, IOService);
  */
 
 void VoodooI2CController::free() {
-    IOFree(physical_device, sizeof(physical_device));
+    IOFree(physical_device, sizeof(VoodooI2CControllerPhysicalDevice));
 
     super::free();
 }
@@ -36,6 +36,7 @@ bool VoodooI2CController::init(OSDictionary* properties) {
     }
 
     physical_device = reinterpret_cast<VoodooI2CControllerPhysicalDevice*>(IOMalloc(sizeof(VoodooI2CControllerPhysicalDevice)));
+    memset(physical_device, 0, sizeof(VoodooI2CControllerPhysicalDevice));
     physical_device->awake = true;
 
     return true;
