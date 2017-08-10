@@ -37,6 +37,7 @@ bool VoodooI2CController::init(OSDictionary* properties) {
     }
 
     physical_device = reinterpret_cast<VoodooI2CControllerPhysicalDevice*>(IOMalloc(sizeof(VoodooI2CControllerPhysicalDevice)));
+    memset(physical_device, 0, sizeof(VoodooI2CControllerPhysicalDevice));
     physical_device->awake = true;
 
     return true;
