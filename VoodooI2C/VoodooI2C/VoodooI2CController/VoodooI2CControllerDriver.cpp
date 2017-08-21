@@ -20,7 +20,7 @@ OSDefineMetaClassAndStructors(VoodooI2CControllerDriver, IOService);
  */
 
 void VoodooI2CControllerDriver::free() {
-    IOFree(device_nubs, sizeof(device_nubs));
+    OSSafeReleaseNULL(device_nubs);
 
     IOFree(bus_device->acpi_config, sizeof(VoodooI2CControllerBusConfig));
     IOFree(bus_device, sizeof(VoodooI2CControllerBusDevice));
@@ -135,7 +135,7 @@ bool VoodooI2CControllerDriver::init(OSDictionary* properties) {
     bus_device->acpi_config = reinterpret_cast<VoodooI2CControllerBusConfig*>(IOMalloc(sizeof(VoodooI2CControllerBusConfig)));
     bus_device->awake = true;
 
-    device_nubs = reinterpret_cast<OSArray*>(IOMalloc(sizeof(OSArray)));
+    device_nubs = OSArray::withCapacity(1);
 
     return true;
 }
@@ -290,13 +290,14 @@ IOReturn VoodooI2CControllerDriver::publishNubs() {
 
                     VoodooI2CDeviceNub* device_nub = OSTypeAlloc(VoodooI2CDeviceNub);
 
-                        if (!device_nub->init(child->dictionaryWithProperties())) {
-                            IOLog("%s::%s Could not initialise nub for %s\n", getName(), bus_device->name, getMatchedName(child));
-                            OSSafeReleaseNULL(device_nub);
-                        }
-                    // device_nub->registerService();
-
-                    // device_nubs->setObject(device_nub);
+                    if (!device_nub->init(child->dictionaryWithProperties()) ||
+                        !device_nub->attach(this, child)) {
+                        IOLog("%s::%s Could not initialise nub for %s\n", getName(), bus_device->name, getMatchedName(child));
+                        OSSafeReleaseNULL(device_nub);
+                        continue;
+                    }
+                    //device_nub->registerService();
+                    device_nubs->setObject(device_nub);
                 }
                 iterator->release();
             }
@@ -307,7 +308,6 @@ IOReturn VoodooI2CControllerDriver::publishNubs() {
 
     return kIOReturnSuccess;
 }
-
 
 /**
  Determines what type of interrupt has fired
@@ -493,6 +493,13 @@ bool VoodooI2CControllerDriver::start(IOService* provider) {
  */
 
 void VoodooI2CControllerDriver::stop(IOService* provider) {
+    while (device_nubs->getCount() > 0){
+        VoodooI2CDeviceNub *nub = (VoodooI2CDeviceNub *)device_nubs->getLastObject();
+        nub->detach(this);
+        device_nubs->removeObject(device_nubs->getCount() - 1);
+        OSSafeReleaseNULL(nub);
+    }
+    
     toggleBusState(kVoodooI2CStateOn);
 
     PMstop();

@@ -23,8 +23,6 @@ bool VoodooI2CDeviceNub::attach(IOService* provider, IOService* child) {
     if (!super::attach(provider))
         return false;
 
-    child->attach(this);
-
     return true;
 }
 
@@ -72,6 +70,8 @@ void VoodooI2CDeviceNub::free() {
 bool VoodooI2CDeviceNub::start(IOService* provider) {
     if (!super::start(provider))
         return false;
+    
+    registerService();
 
     return true;
 }
@@ -83,5 +83,6 @@ bool VoodooI2CDeviceNub::start(IOService* provider) {
  */
 
 void VoodooI2CDeviceNub::stop(IOService* provider) {
+    IOLog("%s::Stopping!\n", getName());
     super::stop(provider);
 }
