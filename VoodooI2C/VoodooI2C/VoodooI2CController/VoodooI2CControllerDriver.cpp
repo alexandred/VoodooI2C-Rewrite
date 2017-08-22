@@ -167,7 +167,7 @@ IOReturn VoodooI2CControllerDriver::initialiseBus() {
     else
         IOLog("%s::%s Warning: hardware too old to adjust SDA hold time\n", getName(), bus_device->name);
 
-    writeRegister(bus_device->transaction_fifo_depth - 1, DW_IC_TX_TL);
+    writeRegister(bus_device->transaction_fifo_depth / 2, DW_IC_TX_TL);
     writeRegister(0, DW_IC_RX_TL);
     writeRegister(bus_device->bus_config, DW_IC_CON);
 
@@ -186,7 +186,6 @@ IOReturn VoodooI2CControllerDriver::initialiseBus() {
          or kIOReturnDeviceBusy
  */
 IOReturn VoodooI2CControllerDriver::prepareTransferI2C(VoodooI2CControllerBusMessage* messages, int* number) {
-    IOLog("%s::%s::prepareTransferI2C!\n", getName(), bus_device->name);
     AbsoluteTime abstime;
     IOReturn sleep;
 
@@ -229,14 +228,14 @@ IOReturn VoodooI2CControllerDriver::prepareTransferI2C(VoodooI2CControllerBusMes
         return kIOReturnError;
 
     if (!bus_device->command_error)
-        return kIOReturnError;
+        return kIOReturnSuccess;
 
     if (bus_device->command_error == DW_IC_ERR_TX_ABRT) {
         handleAbortI2C();
         return kIOReturnError;
     }
 
-    return kIOReturnSuccess;
+    return kIOReturnNotReady;
 }
 
 /**
@@ -378,9 +377,10 @@ void VoodooI2CControllerDriver::readFromBus() {
         receive_valid = readRegister(DW_IC_RXFLR);
 
         /** collect data from receive buffer */
-        for (; length > 0 && receive_valid > 0; length--, receive_valid--)
+        for (; length > 0 && receive_valid > 0; length--, receive_valid--){
             *buffer++ = readRegister(DW_IC_DATA_CMD);
-        bus_device->receive_outstanding--;
+            bus_device->receive_outstanding--;
+        }
 
         /** if there are still more messages to read, set status to read in progress and continue
             else remove read in progress status */
@@ -485,8 +485,6 @@ bool VoodooI2CControllerDriver::start(IOService* provider) {
         goto exit;
     }
     
-    interrupt_source->enable();
-    
     command_gate = IOCommandGate::commandGate(this);
     if (!command_gate || (work_loop->addEventSource(command_gate) != kIOReturnSuccess)) {
         IOLog("%s::%s Could not open command gate\n", getName(), bus_device->name);
@@ -499,9 +497,14 @@ bool VoodooI2CControllerDriver::start(IOService* provider) {
     nub->joinPMtree(this);
     registerPowerDriver(this, VoodooI2CIOPMPowerStates, kVoodooI2CIOPMNumberPowerStates);
 
-    if (getBusConfig() != kIOReturnSuccess)
+    if (getBusConfig() != kIOReturnSuccess){
         IOLog("%s::%s Warning: Error getting bus config, using defaults where necessary\n", getName(), bus_device->name);
-    else
+        bus_device->acpi_config->ss_hcnt = 0x01b0;
+        bus_device->acpi_config->fs_hcnt = 0x48;
+        bus_device->acpi_config->ss_lcnt = 0x01fb;
+        bus_device->acpi_config->fs_lcnt = 0xa0;
+        bus_device->acpi_config->sda_hold = 0x9;
+    } else
         IOLog("%s::%s Got bus configuration values\n", getName(), bus_device->name);
 
     bus_device->functionality = I2C_FUNC_I2C | I2C_FUNC_10BIT_ADDR | I2C_FUNC_SMBUS_BYTE | I2C_FUNC_SMBUS_BYTE_DATA | I2C_FUNC_SMBUS_WORD_DATA | I2C_FUNC_SMBUS_I2C_BLOCK;
@@ -513,6 +516,8 @@ bool VoodooI2CControllerDriver::start(IOService* provider) {
     }
 
     toggleInterrupts(kVoodooI2CStateOff);
+    
+    interrupt_source->enable();
 
     publishNubs();
 
@@ -622,7 +627,6 @@ void VoodooI2CControllerDriver::toggleInterrupts(VoodooI2CState enabled) {
  @return returns kIOReturnSuccess on successful
  */
 IOReturn VoodooI2CControllerDriver::transferI2C(VoodooI2CControllerBusMessage* messages, int number) {
-    IOLog("%s::%s::transferI2C!\n", getName(), bus_device->name);
     return command_gate->runAction(OSMemberFunctionCast(IOCommandGate::Action, this, &VoodooI2CControllerDriver::transferI2CGated), messages, &number);
 }
 
@@ -637,7 +641,6 @@ IOReturn VoodooI2CControllerDriver::transferI2C(VoodooI2CControllerBusMessage* m
  */
 
 IOReturn VoodooI2CControllerDriver::transferI2CGated(VoodooI2CControllerBusMessage* messages, int* number) {
-    IOLog("%s::%s::transferI2CGated!\n", getName(), bus_device->name);
     IOReturn ret;
     int tries;
 
