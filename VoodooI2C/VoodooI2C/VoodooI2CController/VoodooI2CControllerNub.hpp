@@ -27,9 +27,6 @@ class VoodooI2CControllerNub : public IOService {
     VoodooI2CController* controller;
     VoodooI2CControllerDriver* driver;
     const char* name;
-    IOCommandGate* command_gate;
-    IOInterruptEventSource* interrupt_source;
-    IOWorkLoop* work_loop;
 
     // function members
 
@@ -40,10 +37,16 @@ class VoodooI2CControllerNub : public IOService {
     bool start(IOService* provider);
     void stop(IOService* provider);
     void writeRegister(UInt32 value, int offset);
+    
+    virtual IOReturn getInterruptType(int source, int *interruptType) override;
+    virtual IOReturn registerInterrupt(int source, OSObject *target, IOInterruptAction handler, void *refcon) override;
+    virtual IOReturn unregisterInterrupt(int source) override;
+    
+    virtual IOReturn enableInterrupt(int source) override;
+    virtual IOReturn disableInterrupt(int source) override;
 
  private:
     void interruptOccured(OSObject* owner, IOInterruptEventSource* src, int intCount);
-    void releaseResources();
 };
 
 #endif /* VoodooI2CControllerNub_hpp */

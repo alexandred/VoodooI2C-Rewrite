@@ -76,7 +76,7 @@ class VoodooI2CControllerDriver : public IOService {
     // function members
 
     void free();
-    void handleInterrupt();
+    void handleInterrupt(OSObject* owner, IOInterruptEventSource* src, int intCount);
     bool init(OSDictionary* properties);
     VoodooI2CControllerDriver* probe(IOService* provider, SInt32* score);
     IOReturn transferI2C(VoodooI2CControllerBusMessage* messages, int number);
@@ -84,6 +84,10 @@ class VoodooI2CControllerDriver : public IOService {
     void stop(IOService* provider);
 
  private:
+    IOCommandGate* command_gate;
+    IOInterruptEventSource* interrupt_source;
+    IOWorkLoop* work_loop;
+    
     IOReturn getBusConfig();
     void handleAbortI2C();
     IOReturn initialiseBus();
@@ -99,6 +103,8 @@ class VoodooI2CControllerDriver : public IOService {
     IOReturn transferI2CGated(VoodooI2CControllerBusMessage* messages, int* number);
     void transferMessageToBus();
     IOReturn waitBusNotBusyI2C();
+    
+    void releaseResources();
 };
 
 
