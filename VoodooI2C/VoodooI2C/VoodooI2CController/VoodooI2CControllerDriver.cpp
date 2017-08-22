@@ -291,7 +291,8 @@ IOReturn VoodooI2CControllerDriver::publishNubs() {
                     VoodooI2CDeviceNub* device_nub = OSTypeAlloc(VoodooI2CDeviceNub);
 
                     if (!device_nub->init(child->dictionaryWithProperties()) ||
-                        !device_nub->attach(this, child)) {
+                        !device_nub->attach(this, child) ||
+                        !device_nub->start(this)) {
                         IOLog("%s::%s Could not initialise nub for %s\n", getName(), bus_device->name, getMatchedName(child));
                         OSSafeReleaseNULL(device_nub);
                         continue;

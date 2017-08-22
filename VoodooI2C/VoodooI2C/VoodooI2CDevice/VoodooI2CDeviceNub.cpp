@@ -80,6 +80,8 @@ bool VoodooI2CDeviceNub::start(IOService* provider) {
     if (!super::start(provider))
         return false;
     
+    IOLog("%s::Starting!\n", getName());
+    
     registerService();
 
     return true;
