@@ -79,6 +79,7 @@ class VoodooI2CControllerDriver : public IOService {
     void handleInterrupt();
     bool init(OSDictionary* properties);
     VoodooI2CControllerDriver* probe(IOService* provider, SInt32* score);
+    IOReturn transferI2C(VoodooI2CControllerBusMessage* messages, int number);
     bool start(IOService* provider);
     void stop(IOService* provider);
 
@@ -95,7 +96,6 @@ class VoodooI2CControllerDriver : public IOService {
     IOReturn toggleBusState(VoodooI2CState enabled);
     inline void toggleClockGating(VoodooI2CState enabled);
     void toggleInterrupts(VoodooI2CState enabled);
-    IOReturn transferI2C(VoodooI2CControllerBusMessage* messages, int number);
     IOReturn transferI2CGated(VoodooI2CControllerBusMessage* messages, int* number);
     void transferMessageToBus();
     IOReturn waitBusNotBusyI2C();
