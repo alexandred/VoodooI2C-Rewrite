@@ -605,7 +605,7 @@ void VoodooI2CCSGestureEngine::ProcessGesture(csgesture_softc *sc) {
     bool handled = false;
     bool handledByScroll = false;
     
-    if (!handled)
+    if (!handled && abovethreshold==4)
         handled = ProcessFourFingerSwipe(sc, abovethreshold, iToUse);
     if (!handled)
         handled = ProcessThreeFingerSwipe(sc, abovethreshold, iToUse);
